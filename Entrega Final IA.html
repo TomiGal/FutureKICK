@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+  <html lang="es">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FutureKick — La IA que entiende el juego</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* =============================================
+      VARIABLES Y RESET
+    ============================================= */
+    :root {
+      --bg:        #050810;
+      --bg2:       #0c1120;
+      --bg3:       #111827;
+      --green:     #00f57a;
+      --blue:      #1a8cff;
+      --white:     #f0f4ff;
+      --muted:     #5a6480;
+      --border:    rgba(255,255,255,0.07);
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body:    'DM Sans', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+    a { color: var(--green); text-decoration: none; }
+    img { max-width: 100%; border-radius: 12px; }
+
+    /* =============================================
+      FONDO ANIMADO (GRID + PARTÍCULAS)
+    ============================================= */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,245,122,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,122,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    .bg-glow {
+      position: fixed; z-index: 0; pointer-events: none;
+      border-radius: 50%; filter: blur(120px); opacity: 0.12;
+    }
+    .bg-glow.g1 { width: 600px; height: 600px; top: -200px; left: -200px; background: var(--green); animation: floatA 18s ease-in-out infinite; }
+    .bg-glow.g2 { width: 500px; height: 500px; bottom: 10%; right: -150px; background: var(--blue); animation: floatB 22s ease-in-out infinite; }
+    @keyframes floatA { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
+    @keyframes floatB { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,60px)} }
+
+    /* =============================================
+      LAYOUT BASE
+    ============================================= */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+    section { padding: 100px 0; }
+
+    /* =============================================
+      NAV
+    ============================================= */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 18px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(5,8,16,0.7);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      animation: slideDown 0.6s ease both;
+    }
+    @keyframes slideDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: 2px;
+      color: var(--white);
+    }
+    .nav-logo span { color: var(--green); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--green); }
+
+    /* =============================================
+      HERO
+    ============================================= */
+    #hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding-top: 80px;
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--green);
+      border: 1px solid rgba(0,245,122,0.25);
+      background: rgba(0,245,122,0.06);
+      padding: 6px 14px; border-radius: 100px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.8s 0.2s both;
+    }
+    .hero-tag::before { content:''; width:6px; height:6px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.6)} }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(64px, 8vw, 110px);
+      line-height: 0.9;
+      letter-spacing: 2px;
+      animation: fadeUp 0.8s 0.35s both;
+    }
+    .hero-title .accent { color: var(--green); display: block; }
+    .hero-subtitle {
+      margin-top: 28px;
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 440px;
+      line-height: 1.8;
+      animation: fadeUp 0.8s 0.5s both;
+    }
+    .hero-cta {
+      margin-top: 40px;
+      display: flex; gap: 16px; flex-wrap: wrap;
+      animation: fadeUp 0.8s 0.65s both;
+    }
+    .btn {
+      padding: 14px 28px; border-radius: 8px; font-weight: 500; font-size: 14px;
+      cursor: pointer; border: none; transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .btn-primary { background: var(--green); color: #050810; }
+    .btn-primary:hover { background: #00cc65; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,245,122,0.3); }
+    .btn-secondary { background: transparent; color: var(--white); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
+
+    /* Hero visual card */
+    .hero-visual {
+      animation: fadeUp 0.8s 0.4s both;
+      position: relative;
+    }
+    .hero-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+    .hero-card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; }
+    .dot.y { background: #ffbd2e; }
+    .dot.g { background: #28ca41; }
+    .hero-card-body { padding: 24px; }
+
+    /* =============================================
+      ====== ZONA DE IMAGEN 1 (HERO) ======
+    ============================================= */
+    .hero-img-placeholder {
+      width: 100%;
+      aspect-ratio: 16/10;
+      background: linear-gradient(135deg, #0c1a2e 0%, #0a2010 100%);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+      border: 1px dashed rgba(0,245,122,0.2);
+      position: relative; overflow: hidden;
+    }
+    .hero-img-placeholder img {
+      width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; border-radius: 10px;
+    }
+    .placeholder-label {
+      font-family: var(--font-mono); font-size: 11px; color: rgba(0,245,122,0.4);
+      text-align: center; padding: 16px; z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1px; background: var(--border);
+      margin-top: 1px; border-top: 1px solid var(--border);
+    }
+    .stat {
+      background: var(--bg2);
+      padding: 16px 20px;
+    }
+    .stat-num { font-family: var(--font-display); font-size: 28px; color: var(--green); }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+    /* =============================================
+      SECTION TITLES
+    ============================================= */
+    .section-eyebrow {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--green); margin-bottom: 12px; display: block;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(42px, 5vw, 64px);
+      letter-spacing: 2px;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .section-desc { color: var(--muted); max-width: 520px; font-size: 16px; margin-bottom: 56px; }
+
+    /* =============================================
+      PROMPTS SECTION
+    ============================================= */
+    #prompts { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .prompts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .prompt-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: border-color 0.25s, transform 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .prompt-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--green), var(--blue));
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .prompt-card:hover { border-color: rgba(0,245,122,0.2); transform: translateY(-4px); }
+    .prompt-card:hover::before { opacity: 1; }
+    .prompt-num {
+      font-family: var(--font-mono); font-size: 11px; color: var(--green);
+      letter-spacing: 2px; margin-bottom: 14px; display: block;
+    }
+    .prompt-label {
+      font-family: var(--font-display); font-size: 22px; letter-spacing: 1px;
+      margin-bottom: 16px; line-height: 1.1;
+    }
+
+    /* =============================================
+      ====== ZONA DE PROMPTS ======
+    ============================================= */
+    .prompt-input {
+      background: rgba(0,245,122,0.04);
+      border: 1px solid rgba(0,245,122,0.12);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .prompt-input-label {
+      font-family: var(--font-mono); font-size: 10px; color: var(--green);
+      letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block;
+    }
+    .prompt-input p { font-size: 13px; color: rgba(240,244,255,0.7); font-style: italic; }
+    .prompt-response {
+      font-size: 14px; color: var(--muted); line-height: 1.75;
+      border-left: 2px solid rgba(0,245,122,0.2);
+      padding-left: 14px;
+    }
+    .prompt-tool {
+      margin-top: 16px;
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--muted); letter-spacing: 1px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .prompt-tool::before { content:''; width:5px; height:5px; background:var(--blue); border-radius:50%; }
+
+    /* =============================================
+      VISUAL CONTENT SECTION
+    ============================================= */
+    #visual { }
+    .visual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    .visual-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: transform 0.25s, border-color 0.25s;
+    }
+    .visual-card:hover { transform: translateY(-6px); border-color: rgba(26,140,255,0.3); }
+
+    /* =============================================
+      ====== ZONA DE IMÁGENES ======
+    ============================================= */
+    .img-frame {
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg, #0a1628 0%, #071a10 100%);
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .img-frame img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+    .img-placeholder {
+      text-align: center; padding: 20px;
+      font-family: var(--font-mono); font-size: 11px; color: rgba(0,245,122,0.35);
+      border: 1px dashed rgba(0,245,122,0.15); border-radius: 8px; margin: 20px;
+    }
+    .visual-info { padding: 22px 24px; }
+    .visual-title { font-family: var(--font-display); font-size: 20px; letter-spacing: 1px; margin-bottom: 8px; }
+    .visual-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+    .visual-prompt-tag {
+      font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+      background: var(--bg3); border: 1px solid var(--border);
+      padding: 6px 10px; border-radius: 6px; display: inline-block;
+    }
+
+    /* =============================================
+      AUDIO SECTION
+    ============================================= */
+    #audio { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .audio-wrapper {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center;
+    }
+    .audio-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+    }
+    .audio-icon {
+      width: 56px; height: 56px;
+      background: rgba(0,245,122,0.08);
+      border: 1px solid rgba(0,245,122,0.2);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .audio-icon svg { width: 22px; height: 22px; fill: var(--green); }
+    .audio-title { font-family: var(--font-display); font-size: 26px; letter-spacing: 1px; margin-bottom: 10px; }
+    .audio-desc { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.7; }
+
+    /* =============================================
+      ====== ZONA DE AUDIO ======
+    ============================================= */
+    audio {
+      width: 100%;
+      border-radius: 8px;
+      accent-color: var(--green);
+    }
+    .audio-placeholder {
+      width: 100%; padding: 20px;
+      background: rgba(0,245,122,0.04);
+      border: 1px dashed rgba(0,245,122,0.15);
+      border-radius: 8px;
+      text-align: center;
+      font-family: var(--font-mono); font-size: 11px; color: rgba(0,245,122,0.35);
+    }
+    .audio-tool { margin-top: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+    .audio-script {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+    }
+    .audio-script-label {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--green); margin-bottom: 14px; display: block;
+    }
+    .audio-script blockquote {
+      font-size: 16px; line-height: 1.85;
+      color: rgba(240,244,255,0.75);
+      font-style: italic;
+      border-left: 2px solid var(--green);
+      padding-left: 18px;
+    }
+
+    /* =============================================
+      ABOUT / VISION SECTION
+    ============================================= */
+    #about { }
+    .about-wrapper {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: start;
+    }
+    .about-text { }
+    .about-body { font-size: 16px; color: rgba(240,244,255,0.75); line-height: 1.9; margin-bottom: 28px; }
+    .vision-card {
+      background: linear-gradient(135deg, rgba(0,245,122,0.04) 0%, rgba(26,140,255,0.04) 100%);
+      border: 1px solid rgba(0,245,122,0.15);
+      border-radius: 16px;
+      padding: 28px;
+      position: relative; overflow: hidden;
+    }
+    .vision-card::after {
+      content: '"';
+      position: absolute; bottom: -20px; right: 20px;
+      font-family: var(--font-display);
+      font-size: 180px; color: rgba(0,245,122,0.04);
+      line-height: 1;
+    }
+    .vision-card p { font-size: 15px; color: rgba(240,244,255,0.7); line-height: 1.85; font-style: italic; }
+    .vision-label {
+      font-family: var(--font-mono); font-size: 10px; color: var(--green);
+      letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; display: block;
+    }
+
+    .tools-used {
+      margin-top: 40px;
+    }
+    .tools-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; display: block; }
+    .tools-list { display: flex; flex-wrap: wrap; gap: 10px; }
+    .tool-tag {
+      font-size: 12px; font-family: var(--font-mono);
+      padding: 6px 14px; border-radius: 100px;
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--muted);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .tool-tag:hover { border-color: var(--green); color: var(--green); }
+
+    /* =============================================
+      FOOTER
+    ============================================= */
+    footer {
+      padding: 40px 28px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      position: relative; z-index: 1;
+    }
+    .footer-logo { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; margin-bottom: 8px; }
+    .footer-logo span { color: var(--green); }
+    .footer-sub { font-size: 12px; color: var(--muted); }
+
+    /* =============================================
+      RESPONSIVE
+    ============================================= */
+    @media (max-width: 768px) {
+      .hero-inner, .prompts-grid, .visual-grid, .audio-wrapper, .about-wrapper { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(3,1fr); }
+      nav { padding: 14px 20px; }
+      .nav-links { display: none; }
+    }
+  </style>
+  </head>
+  <body>
+
+  <!-- Fondos decorativos -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow g1"></div>
+  <div class="bg-glow g2"></div>
+
+  <!-- =============================================
+      NAVEGACIÓN
+  ============================================= -->
+  <nav>
+    <div class="nav-logo">FUTURE<span>KICK</span></div>
+    <ul class="nav-links">
+      <li><a href="#prompts">Prompts</a></li>
+      <li><a href="#visual">Visual</a></li>
+      <li><a href="#audio">Audio</a></li>
+      <li><a href="#about">Sobre mí</a></li>
+    </ul>
+  </nav>
+
+  <!-- =============================================
+      HERO
+  ============================================= -->
+  <section id="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="hero-tag">Startup · IA · Fútbol</div>
+          <h1 class="hero-title">
+            FUTURE
+            <span class="accent">KICK</span>
+          </h1>
+          <p class="hero-subtitle">
+            La inteligencia artificial que entiende el juego. Análisis de rendimiento, scouting predictivo y datos en tiempo real para el fútbol del futuro.
+          </p>
+          <div class="hero-cta">
+            <a href="#prompts" class="btn btn-primary">Ver el proyecto</a>
+            <a href="#about" class="btn btn-secondary">Sobre mí</a>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="hero-card">
+            <div class="hero-card-header">
+              <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+            </div>
+            <div class="hero-card-body">
+
+              <!-- =============================================
+                  IMAGEN 1
+              ============================================= -->
+              <div class="hero-img-placeholder">
+                <img src="imagen1.png" alt="FutureKick stadium visualization">
+              </div>
+
+            </div>
+            <div class="stats-row">
+              <div class="stat">
+                <div class="stat-num">98%</div>
+                <div class="stat-label">Precisión</div>
+              </div>
+              <div class="stat">
+                <div class="stat-num">12K</div>
+                <div class="stat-label">Jugadores</div>
+              </div>
+              <div class="stat">
+                <div class="stat-num">340</div>
+                <div class="stat-label">Clubes</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+      PROMPTS SECTION
+  ============================================= -->
+  <section id="prompts">
+    <div class="container">
+      <span class="section-eyebrow">// Prompts generados con IA</span>
+      <h2 class="section-title">LOS PROMPTS</h2>
+      <p class="section-desc">Prompts desarrollados con modelos de lenguaje para explorar el potencial de la IA aplicada al fútbol profesional.</p>
+
+      <div class="prompts-grid">
+
+        <!-- =============================================
+            PROMPT 1
+        ============================================= -->
+        <div class="prompt-card">
+          <span class="prompt-num">// PROMPT 01</span>
+          <div class="prompt-label">Análisis de jugador</div>
+          <div class="prompt-input">
+            <span class="prompt-input-label">Prompt usado:</span>
+            <p>Actuá como analista de datos deportivos de una startup de IA llamada FutureKick. Describí cómo usarías modelos de inteligencia artificial para analizar el rendimiento de un mediocampista en un partido de fútbol. Incluí métricas clave, tipo de datos que recolectarías y cómo presentarías los resultados al cuerpo técnico.</p>
+          </div>
+          <div class="prompt-response">
+            Como analista de datos deportivos en FutureKick, utilizaría modelos de inteligencia artificial para evaluar el rendimiento de un mediocampista combinando datos físicos, técnicos y tácticos.
+
+            Recolectaría datos como: distancia recorrida, intensidad de carrera, precisión de pases, progresiones con balón, recuperaciones, intercepciones y participación en la construcción de juego. Además, integraría tracking positional (datos de ubicación en el campo en tiempo real) y eventos del partido.
+
+            Aplicaría modelos de machine learning para detectar patrones, evaluar toma de decisiones bajo presión y medir el impacto del jugador en distintas fases del juego (ofensiva, defensiva y transición).
+
+            Los resultados se presentarían en dashboards visuales con métrricas clave, mapas de calor, redes de pases y un índice de rendimiento global, junto con insights accionables para el cuerpo técnico.
+          </div>
+          <div class="prompt-tool">Generado con ChatGPT / Gemini</div>
+        </div>
+
+        <!-- =============================================
+            PROMPT 2
+        ============================================= -->
+        <div class="prompt-card">
+          <span class="prompt-num">// PROMPT 02</span>
+          <div class="prompt-label">Scouting con IA</div>
+          <div class="prompt-input">
+            <span class="prompt-input-label">Prompt usado:</span>
+            <p>Sos el sistema de scouting inteligente de FutureKick. Un club de la liga argentina necesita un delantero centro de menos de 23 años, potente en el juego aéreo y con buena salida desde el área. Sugerí un perfil ideal de jugador y explicá qué variables de IA usarías para encontrarlo en bases de datos de ligas menores.</p>
+          </div>
+          <div class="prompt-response">
+            Como sistema de scouting inteligente de FutureKick, definiría un perfil ideal de delantero centro sub-23 con gran capacidad aérea, potencia física y habilidad para iniciar jugadas desde el área.
+
+            El jugador buscado debería destacarse en métricas como: porcentaje de duelos aéreos ganados, goles por 90 minutos, expected goals (xG), presión alta efectiva, pases progresivos y capacidad de retención del balón.
+
+            Para encontrarlo, utilizaría modelos de IA que analicen grandes bases de datos de ligas menores, combinando técnicas de clustering para identificar perfiles similares y modelos predictivos para proyectar desarrollo futuro.
+
+            También incorporaría análisis de video automatizado mediante computer vision para evaluar movimientos sin balón, posicionamiento y timing en el juego aéreo.
+
+            El resultado sería un ranking de candidatos con un score de compatibilidad según el estilo de juego del club.
+          </div>
+          <div class="prompt-tool">Generado con ChatGPT / Gemini</div>
+        </div>
+
+        <!-- =============================================
+            PROMPT 3
+        ============================================= -->
+        <div class="prompt-card">
+          <span class="prompt-num">// PROMPT 03</span>
+          <div class="prompt-label">Visión 2030</div>
+          <div class="prompt-input">
+            <span class="prompt-input-label">Prompt usado:</span>
+            <p>Escribí una sección 'Visión 2030' para el sitio web de FutureKick, una startup que usa IA para transformar el fútbol profesional. El tono debe ser inspirador, tecnológico y apasionado. Máximo 150 palabras.</p>
+          </div>
+          <div class="prompt-response">
+            En FutureKick creemos que el fútbol del futuro se construye hoy, impulsado por inteligencia artificial.
+
+            Para 2030, nuestra visión es transformar cada decisión deportiva en una ventaja competitiva basada en datos. Desde el scouting hasta la estrategia en tiempo real, la IA permitirá comprender el juego a un nivel nunca antes visto.
+
+            Imaginamos clubes que anticipan el rendimiento de sus jugadores, optimizan cada entrenamiento y descubren talento oculto en cualquier rincón del mundo.
+
+            FutureKick no solo analiza el fútbol: lo redefine. Combinamos tecnología, pasión y conocimiento para potenciar a quienes viven el juego dentro y fuera de la cancha.
+
+            El futuro del fútbol es inteligente. Y ya empezó.
+          </div>
+          <div class="prompt-tool">Generado con ChatGPT / Gemini</div>
+        </div>
+
+        <!-- =============================================
+            PROMPT 4
+        ============================================= -->
+        <div class="prompt-card">
+          <span class="prompt-num">// PROMPT 04</span>
+          <div class="prompt-label">Modelo fundacional</div>
+          <div class="prompt-input">
+            <span class="prompt-input-label">Prompt usado:</span>
+            <p>Explicá de forma clara y accesible qué es un modelo fundacional de inteligencia artificial, cómo funciona y por qué es relevante para una startup como FutureKick que trabaja con datos deportivos. Usá un lenguaje que pueda entender alguien sin conocimientos técnicos profundos.</p>
+          </div>
+          <div class="prompt-response">
+            Un modelo fundacional de inteligencia artificial es un tipo de modelo entrenado con grandes volúmenes de datos que puede adaptarse a muchas tareas diferentes, como analizar texto, imágenes o patrones.
+
+            En lugar de crear un modelo desde cero para cada problema, estos modelos aprenden conceptos generales y luego se pueden ajustar para usos específicos. Por ejemplo, un mismo modelo puede servir para analizar partidos, detectar jugadas o evaluar rendimiento de jugadores.
+
+            Funcionan mediante redes neuronales que identifican patrones en los datos y mejoran con el entrenamiento.
+
+            Para una startup como FutureKick, son clave porque permiten acelerar el desarrollo de soluciones, reducir costos y aplicar IA de forma flexible a distintos aspectos del fútbol, desde scouting hasta análisis táctico.
+          </div>
+          <div class="prompt-tool">Generado con ChatGPT / Gemini</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+      VISUAL CONTENT SECTION
+  ============================================= -->
+  <section id="visual">
+    <div class="container">
+      <span class="section-eyebrow">// Contenido visual generado con IA</span>
+      <h2 class="section-title">IMÁGENES</h2>
+      <p class="section-desc">Imágenes generadas con herramientas de IA a partir de prompts diseñados para la identidad visual de FutureKick.</p>
+
+      <div class="visual-grid">
+
+        <!-- =============================================
+            IMAGEN 1 EN GALERÍA
+        ============================================= -->
+        <div class="visual-card">
+          <div class="img-frame">
+            <img src="imagen1.png" alt="FutureKick stadium">
+          </div>
+          <div class="visual-info">
+            <div class="visual-title">Estadio del futuro</div>
+            <div class="visual-desc">Visualización de un estadio de fútbol con overlays de datos de IA, mapas de calor y análisis en tiempo real.</div>
+            <span class="visual-prompt-tag">Krea.ai · Prompt: "Futuristic football stadium at night, AI data overlays and heatmaps floating over the field, neon green and electric blue color palette, dark cinematic atmosphere, high tech sports analytics, digital art, 4k"</span>
+          </div>
+        </div>
+
+        <!-- =============================================
+            IMAGEN 2 EN GALERÍA
+        ============================================= -->
+        <div class="visual-card">
+          <div class="img-frame">
+            <img src="imagen2.png" alt="FutureKick logo concept">
+          </div>
+          <div class="visual-info">
+            <div class="visual-title">Identidad visual</div>
+            <div class="visual-desc">Concepto de logotipo e identidad de marca para FutureKick: fusión entre un balón de fútbol y una red neuronal.</div>
+            <span class="visual-prompt-tag">Krea.ai · Prompt: "Minimalist logo concept for a sports AI startup called FutureKick, soccer ball merged with a neural network circuit, neon green on dark navy background, clean geometric design, modern tech branding"</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+      AUDIO SECTION
+  ============================================= -->
+  <section id="audio">
+    <div class="container">
+      <span class="section-eyebrow">// Audio generado con IA</span>
+      <h2 class="section-title">EL PITCH</h2>
+
+      <div class="audio-wrapper">
+        <div>
+          <div class="audio-card">
+            <div class="audio-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9A9 9 0 0 1 3 12a9 9 0 0 1 9-9zm-1 5v8l6-4-6-4z"/></svg>
+            </div>
+            <div class="audio-title">Pitch de FutureKick</div>
+            <div class="audio-desc">Audio generado con ElevenLabs presentando la startup. Voz sintética entrenada con IA a partir del guión redactado.</div>
+
+            <!-- =============================================
+                AUDIO
+            ============================================= -->
+            <audio controls src="audio.mp3"></audio>
+
+            <div class="audio-tool">Generado con ElevenLabs.io</div>
+          </div>
+        </div>
+
+        <div class="audio-script">
+          <span class="audio-script-label">// Guión utilizado</span>
+          <blockquote>
+            "Bienvenidos a FutureKick. Somos una startup que cree que el fútbol del futuro se juega con datos. Usamos inteligencia artificial para analizar el rendimiento de cada jugador, detectar talentos ocultos en ligas menores y ayudar a los cuerpos técnicos a tomar decisiones más inteligentes. Porque el próximo grande puede estar en cualquier cancha... y nosotros lo vamos a encontrar primero."
+          </blockquote>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+      ABOUT / SOBRE MÍ SECTION
+  ============================================= -->
+  <section id="about">
+    <div class="container">
+      <span class="section-eyebrow">// Sobre el proyecto</span>
+      <h2 class="section-title">SOBRE MÍ</h2>
+
+      <div class="about-wrapper">
+        <div class="about-text">
+
+          <!-- Galindez Tomas -->
+          <p class="about-body">
+            Soy Galindez Tomas, estudiante de Inteligencia Artificial con pasión por el fútbol, la tecnología y el emprendimiento. Este portfolio refleja mi aprendizaje durante el curso, explorando cómo las herramientas de IA generativa pueden aplicarse a industrias reales.
+          </p>
+          <p class="about-body">
+            FutureKick es mi visión de cómo la inteligencia artificial puede transformar el deporte más popular del mundo: haciendo el juego más justo, más inteligente y más apasionante para todos.
+          </p>
+
+          <div class="tools-used">
+            <span class="tools-label">Herramientas utilizadas</span>
+            <div class="tools-list">
+              <span class="tool-tag">ChatGPT</span>
+              <span class="tool-tag">Gemini</span>
+              <span class="tool-tag">Krea.ai</span>
+              <span class="tool-tag">ElevenLabs</span>
+              <span class="tool-tag">Claude</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="vision-card">
+          <span class="vision-label">// Visión 2030</span>
+          <p>
+            En FutureKick creemos que el fútbol del futuro se construye hoy, impulsado por inteligencia artificial.
+
+            Para 2030, nuestra visión es transformar cada decisión deportiva en una ventaja competitiva basada en datos. Desde el scouting hasta la estrategia en tiempo real, la IA permitirá comprender el juego a un nivel nunca antes visto.
+
+            Imaginamos clubes que anticipan el rendimiento de sus jugadores, optimizan cada entrenamiento y descubren talento oculto en cualquier rincón del mundo.
+
+            FutureKick no solo analiza el fútbol: lo redefine. Combinamos tecnología, pasión y conocimiento para potenciar a quienes viven el juego dentro y fuera de la cancha.
+
+            El futuro del fútbol es inteligente. Y ya empezó.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =============================================
+      FOOTER
+  ============================================= -->
+  <footer>
+    <div class="footer-logo">FUTURE<span>KICK</span></div>
+    <p class="footer-sub">Portfolio final · Curso de Inteligencia Artificial · Generado con IA</p>
+  </footer>
+
+  </body>
+</html>
